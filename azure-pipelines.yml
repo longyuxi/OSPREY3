@@ -1,4 +1,9 @@
 
+# don't automatically trigger builds from commits
+# this pipeline is for manually packaging releases on the Osprey 4 website
+# use a different pipeline for CI/CD builds
+trigger: none
+
 jobs:
   - job: build
     timeoutInMinutes: 20
