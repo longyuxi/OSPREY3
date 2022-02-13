@@ -1,7 +1,13 @@
 
-# don't automatically trigger builds from commits
-# this pipeline is for manually packaging releases on the Osprey 4 website
-# use a different pipeline for CI/CD builds
+# This file configures a build system in Azure Pipelines.
+# https://dev.azure.com/donaldlab/osprey/_build
+# Osprey uses it to build the code on multiple platforms (eg Linux, Windos, Mac),
+# so deveploers don't need to find computers with the right hardware/OS combo to make releases.
+
+# This pipeline is for manually packaging releases on the Osprey 4 website.
+# If you're looking for CI/CD builds, try the ci-pipelines.yml file.
+
+# don't automatically trigger builds from commits, this is for manual releases
 trigger: none
 
 jobs:
@@ -11,23 +17,24 @@ jobs:
       matrix:
         Linux:
           imageName: ubuntu-latest
+          gradleWrapper: gradlew
 
     pool:
       vmImage: $(imageName)
 
     steps:
-      - task: Bash@3
-        inputs:
-          targetType: 'inline'
-          script: |
-            echo 'Hello world'
-            uname -a
 
-#  - task: Gradle@3
-#    inputs:
-#      gradleWrapperFile: 'gradlew'
-#      tasks: 'serverRelease'
-#      publishJUnitResults: false
-#      javaHomeOption: 'JDKVersion'
-#      sonarQubeRunAnalysis: false
-#      spotBugsAnalysis: false
+      - task: JavaToolInstaller@0
+        # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/tool/java-tool-installer?view=azure-devops
+        inputs:
+          # JDK 17 is installed by default on Microsoft agents, all three platforms, Eclipse Temurin release
+          # https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/hosted?view=azure-devops&tabs=yaml#software
+          versionSpec: '17'
+          jdkArchitectureOption: 'x64'
+          jdkSourceOption: 'PreInstalled'
+
+      - task: Gradle@3
+        # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/build/gradle?view=azure-devops
+        inputs:
+          gradleWrapperFile: '$(gradleWrapper)'
+          tasks: 'serverRelease'
