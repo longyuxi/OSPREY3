@@ -77,7 +77,7 @@ jobs:
         condition: eq(variables['Agent.JobName'], 'build Linux')
         inputs:
           gradleWrapperFile: $(gradleWrapper)
-          tasks: 'serviceRelease serviceReleaseDockerPrep'
+          tasks: 'serviceRelease serviceDockerPrep'
 
       - task: PublishPipelineArtifact@1
         # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/publish-pipeline-artifact?view=azure-devops
