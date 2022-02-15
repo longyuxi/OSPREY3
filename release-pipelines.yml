@@ -85,6 +85,12 @@ jobs:
         inputs:
           filePath: buildSrc/src/main/docker/service/build.sh
 
+      - task: Gradle@3
+        condition: eq(variables['Agent.JobName'], 'build Linux')
+        inputs:
+          gradleWrapperFile: $(gradleWrapper)
+          tasks: 'serviceDockerRelease'
+
       - task: PublishPipelineArtifact@1
         # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/publish-pipeline-artifact?view=azure-devops
         inputs:
