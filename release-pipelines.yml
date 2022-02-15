@@ -49,11 +49,11 @@ jobs:
       # https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
 
       - script: |
-          echo All jobs: $(variables.Agent.JobName)
+          echo All jobs: $(variables['Agent.JobName'])
 
       - script: |
-          echo Just one job: $(variables.Agent.JobName)
-        condition: eq(variables.Agent.JobName, 'build Linux')
+          echo Just one job: $(variables['Agent.JobName'])
+        condition: eq(variables['Agent.JobName'], 'build Linux')
 
 #      - task: JavaToolInstaller@0
 #        # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/tool/java-tool-installer?view=azure-devops
