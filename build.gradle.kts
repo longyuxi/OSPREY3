@@ -81,6 +81,10 @@ idea {
 	}
 }
 
+application {
+	mainClassName = "edu.duke.cs.osprey.design.Main"
+}
+
 dependencies {
 
 	// kotlin runtime
@@ -114,7 +118,7 @@ dependencies {
 	implementation("org.joml:joml:1.9.19")
 	implementation("org.tukaani:xz:1.8")
 	implementation("com.hazelcast:hazelcast:4.0")
-	implementation("net.java.dev.jna:jna:5.5.0")
+	implementation("net.java.dev.jna:jna:5.10.0")
 	implementation("com.google.guava:guava:29.0-jre")
 	implementation("org.apache.commons:commons-lang3:3.4")
 	implementation("commons-io:commons-io:2.5")
@@ -163,13 +167,6 @@ dependencies {
 	listOf("linux-x86_64", "apple-x86_64", "windows-x86_64").forEach {
 		runtimeOnly("org.jcuda:jcuda-natives:0.8.0:$it")
 	}
-
-	// used by the build system
-	testImplementation("org.json:json:20210307")
-	val dokkaVersion = "1.6.0"
-	testImplementation("org.jetbrains.dokka:dokka-cli:$dokkaVersion")
-	testImplementation("org.jetbrains.dokka:dokka-base:$dokkaVersion")
-	testImplementation("org.jetbrains.dokka:dokka-core:$dokkaVersion")
 }
 
 
@@ -206,7 +203,7 @@ tasks.withType<KotlinCompile> {
 
 	kotlinOptions {
 
-		jvmTarget = "1.8"
+		jvmTarget = Jvm.javaLangVersion.toString()
 
 		// enable experimental features so we can use the fancy ktor stuff
 		freeCompilerArgs += "-Xuse-experimental=kotlin.Experimental"
