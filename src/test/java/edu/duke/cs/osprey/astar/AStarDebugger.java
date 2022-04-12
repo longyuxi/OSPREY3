@@ -95,6 +95,29 @@ public class AStarDebugger {
 		 */
 
 		/**
+		 * Pseudocode for nextConf()
+		 * Q <- new Queue {}
+		 * FUNCTION nextConf():
+		 *
+		 * 	IF no root DO
+		 * 		make root and add root to queue
+		 * 	FI
+		 *
+		 * 	WHILE true DO // until we pop a leaf
+		 * 		node N <- pop(Q)
+		 * 		IF N is leaf DO
+		 * 			return N
+		 * 		ELSE DO // N has children
+		 * 			add all of N's children to Q
+		 * 		FI
+		 * 	ENDWHILE
+		 *
+		 *
+		 *
+		 *
+		 */
+
+		/**
 		 * Modifying the tree search for outputting the tree
 		 *
 		 * 	Q <- {root}
