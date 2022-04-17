@@ -485,6 +485,7 @@ public class ConfAStarTree implements ConfSearch {
 		private final String treeFilePath = "/home/longyuxi/Documents/osprey_outputs/tree.txt";
 		private FileWriter fw;
 		private BufferedWriter bw;
+		private boolean writeTreeToFile;
 
 		private ConfAStarNode rootNode = null;
 
@@ -496,9 +497,19 @@ public class ConfAStarTree implements ConfSearch {
 			try {
 				this.fw = new FileWriter(treeFilePath, true);
 				this.bw = new BufferedWriter(fw);
+				this.writeTreeToFile = true;
 			} catch (Exception e){
 				log("Failed to write to %s", treeFilePath);
+				this.writeTreeToFile = false;
 			}
+		}
+
+		public boolean isWriteTreeToFile() {
+			return writeTreeToFile;
+		}
+
+		public void setWriteTreeToFile(boolean writeTreeToFile) {
+			this.writeTreeToFile = writeTreeToFile;
 		}
 
 		@Override
@@ -551,17 +562,19 @@ public class ConfAStarTree implements ConfSearch {
 				ConfAStarNode node = queue.poll();
 
 				// write node conformation and its depth
-				try{
-					String msg = Arrays.toString(node.makeConf(rcs.getNumPos())) + "\t" +
-							String.valueOf(node.getLevel());
-					// if this is a leaf node, write its energy as well
-					if (node.getLevel() == rcs.getNumPos()) {
-						msg += "\t" + emat.confE(node.makeConf(rcs.getNumPos()));
+				if(writeTreeToFile) {
+					try {
+						String msg = Arrays.toString(node.makeConf(rcs.getNumPos())) + "\t" +
+								String.valueOf(node.getLevel());
+						// if this is a leaf node, write its energy as well
+						if (node.getLevel() == rcs.getNumPos()) {
+							msg += "\t" + emat.confE(node.makeConf(rcs.getNumPos()));
+						}
+						this.bw.append(msg);
+						this.bw.newLine();
+					} catch (Exception e) {
+						log("Exception while writing tree search history in nextConf()");
 					}
-					this.bw.append(msg);
-					this.bw.newLine();
-				} catch (Exception e){
-					log("Exception while writing tree search history in nextConf()");
 				}
 
 				// if this node was pruned dynamically, then ignore it
