@@ -32,8 +32,11 @@
 
 package edu.duke.cs.osprey.astar.conf;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import edu.duke.cs.osprey.astar.AStarProgress;
@@ -66,6 +69,10 @@ import edu.duke.cs.osprey.pruning.PruningMatrix;
 import edu.duke.cs.osprey.tools.MathTools;
 import edu.duke.cs.osprey.tools.ObjectPool;
 import edu.duke.cs.osprey.tools.ObjectPool.Checkout;
+
+import static edu.duke.cs.osprey.tools.Log.appendToFile;
+import static edu.duke.cs.osprey.tools.Log.deleteFile;
+import static edu.duke.cs.osprey.tools.Log.log;
 
 
 public class ConfAStarTree implements ConfSearch {
@@ -234,7 +241,8 @@ public class ConfAStarTree implements ConfSearch {
 				rcs,
 				factory,
 				pruner,
-				maxNumNodes
+				maxNumNodes,
+				emat
 			);
 			if (showProgress) {
 				tree.initProgress();
@@ -327,8 +335,9 @@ public class ConfAStarTree implements ConfSearch {
 	private AStarProgress progress;
 	private TaskExecutor tasks;
 	private ObjectPool<ScoreContext> contexts;
+	private EnergyMatrix emat;
 	
-	private ConfAStarTree(AStarOrder order, AStarScorer gscorer, AStarScorer hscorer, MathTools.Optimizer optimizer, RCs rcs, ConfAStarFactory factory, AStarPruner pruner, Long maxNumNodes) {
+	private ConfAStarTree(AStarOrder order, AStarScorer gscorer, AStarScorer hscorer, MathTools.Optimizer optimizer, RCs rcs, ConfAStarFactory factory, AStarPruner pruner, Long maxNumNodes, EnergyMatrix emat) {
 		this.order = order;
 		this.gscorer = gscorer;
 		this.hscorer = hscorer;
@@ -336,6 +345,7 @@ public class ConfAStarTree implements ConfSearch {
 		this.rcs = rcs;
 		this.factory = factory;
 		this.pruner = pruner;
+		this.emat = emat;
 
 		if (maxNumNodes != null) {
 			this.impl = new SimplifiedBoundedImpl(maxNumNodes);
@@ -472,11 +482,23 @@ public class ConfAStarTree implements ConfSearch {
 	private class UnboundedImpl implements AStarImpl {
 
 		private final Queue<ConfAStarNode> queue;
+		private final String treeFilePath = "/home/longyuxi/Documents/osprey_outputs/tree.txt";
+		private FileWriter fw;
+		private BufferedWriter bw;
 
 		private ConfAStarNode rootNode = null;
 
 		UnboundedImpl() {
 			this.queue = factory.makeQueue(rcs);
+
+			// start file writer
+			deleteFile(treeFilePath);
+			try {
+				this.fw = new FileWriter(treeFilePath, true);
+				this.bw = new BufferedWriter(fw);
+			} catch (Exception e){
+				log("Failed to write to %s", treeFilePath);
+			}
 		}
 
 		@Override
@@ -514,11 +536,33 @@ public class ConfAStarTree implements ConfSearch {
 
 				// no nodes left? we're done
 				if (queue.isEmpty()) {
+
+					// close the file connection first
+					try{
+						bw.close();
+					} catch (Exception e){
+
+					}
+
 					return null;
 				}
 
 				// get the next node to expand
 				ConfAStarNode node = queue.poll();
+
+				// write node conformation and its depth
+				try{
+					String msg = Arrays.toString(node.makeConf(rcs.getNumPos())) + "\t" +
+							String.valueOf(node.getLevel());
+					// if this is a leaf node, write its energy as well
+					if (node.getLevel() == rcs.getNumPos()) {
+						msg += "\t" + emat.confE(node.makeConf(rcs.getNumPos()));
+					}
+					this.bw.append(msg);
+					this.bw.newLine();
+				} catch (Exception e){
+					log("Exception while writing tree search history in nextConf()");
+				}
 
 				// if this node was pruned dynamically, then ignore it
 				if (pruner != null && pruner.isPruned(node)) {
@@ -655,6 +699,7 @@ public class ConfAStarTree implements ConfSearch {
 
 				// is it a leaf node?
 				if (node.depth == numPos) {
+
 
 					// leaf nodes should be all g, no h
 					assert (node.getHScore(optimizer) == 0.0);

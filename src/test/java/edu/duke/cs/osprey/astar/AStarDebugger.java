@@ -55,10 +55,13 @@ import edu.duke.cs.osprey.tools.TimeFormatter;
 
 import java.io.File;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 import static edu.duke.cs.osprey.tools.Log.formatBig;
 import static edu.duke.cs.osprey.tools.Log.log;
+import static edu.duke.cs.osprey.tools.Log.appendToFile;
+import static edu.duke.cs.osprey.tools.Log.deleteFile;
 
 // Copied from BenchmarkConfRanker.java
 public class AStarDebugger {
@@ -112,9 +115,6 @@ public class AStarDebugger {
 		 * 		FI
 		 * 	ENDWHILE
 		 *
-		 *
-		 *
-		 *
 		 */
 
 		/**
@@ -136,6 +136,28 @@ public class AStarDebugger {
 		 *
 		 */
 
+
+		/**
+		 * Pseudocode for modified nextConf()
+		 * Q <- new Queue {}
+		 * FUNCTION nextConf():
+		 *
+		 * 	IF no root DO
+		 * 		make root and add root to queue
+		 * 	FI
+		 *
+		 * 	WHILE true DO // until we pop a leaf
+		 * 		node N <- pop(Q)
+		 * 		append information of N to output file
+		 * 		IF N is leaf DO
+		 * 			return N
+		 * 		ELSE DO // N has children
+		 * 			add all of N's children to Q
+		 * 		FI
+		 * 	ENDWHILE
+		 *
+		 */
+
 		// try that gp120 design with massive flexibility
 		Molecule mol = PDBIO.readResource("/gp120/gp120SRVRC26.09SR.pdb");
 
@@ -150,21 +172,27 @@ public class AStarDebugger {
 			.setResidues("H1792", "L2250")
 			.setTemplateLibrary(templateLib)
 			.build();
+
 		ligand.flexibility.get("H1901").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
 		ligand.flexibility.get("H1904").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
 		ligand.flexibility.get("H1905").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
+		ligand.flexibility.get("H1906").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
+//		ligand.flexibility.get("H1907").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
+//
+//		ligand.flexibility.get("H1908").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
 
-		Strand target = new Strand.Builder(mol)
-			.setResidues("F379", "J1791")
-			.setTemplateLibrary(templateLib)
-			.build();
-		target.flexibility.get("G973").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
-		target.flexibility.get("G977").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
-		target.flexibility.get("G978").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
-
+//
+//		Strand target = new Strand.Builder(mol)
+//			.setResidues("F379", "J1791")
+//			.setTemplateLibrary(templateLib)
+//			.build();
+//		target.flexibility.get("G973").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
+//		target.flexibility.get("G977").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
+//		target.flexibility.get("G978").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
+//
 		SimpleConfSpace confSpace = new SimpleConfSpace.Builder()
 			.addStrand(ligand)
-			.addStrand(target)
+//			.addStrand(target)
 			.build();
 
 		// calc the emat
@@ -180,7 +208,8 @@ public class AStarDebugger {
 				.calcEnergyMatrix();
 		}
 		// pick the wild-type sequence
-		Sequence sequence = confSpace.makeWildTypeSequence();
+		Sequence sequence = confSpace.makeUnassignedSequence();
+//		Sequence sequence = confSpace.makeWildTypeSequence();
 		RCs rcs = sequence.makeRCs(confSpace);
 
 		log("confs: %s", formatBig(makeAStar(emat, rcs).getNumConformations()));
@@ -204,15 +233,27 @@ public class AStarDebugger {
 		{
 			int counter = 0;
 			ConfAStarTree astar = makeAStar(emat, rcs);
+			double prev_energy = -999.;
 			while (true) {
 
 				ConfSearch.ScoredConf conf = astar.nextConf();
-				if(counter <= 10){
-					log(conf.toString());
-				}
 				if (conf == null) {
 					break;
 				}
+
+				if(emat.confE(conf.getAssignments()) < prev_energy){
+					log("Energy: " + emat.confE(conf.getAssignments()));
+					log("This energy less than prev");
+					prev_energy = emat.confE(conf.getAssignments());
+
+					log("Score: " + conf.getScore());
+
+					log(conf.toString());
+				}
+
+//				if(counter < 10){
+//					log(Arrays.toString(conf.getAssignments()));
+//				}
 				counter++;
 			}
 		}
