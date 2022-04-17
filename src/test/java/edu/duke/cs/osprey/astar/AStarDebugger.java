@@ -45,6 +45,7 @@ import edu.duke.cs.osprey.ematrix.SimplerEnergyMatrixCalculator;
 import edu.duke.cs.osprey.energy.ConfEnergyCalculator;
 import edu.duke.cs.osprey.energy.EnergyCalculator;
 import edu.duke.cs.osprey.energy.forcefield.ForcefieldParams;
+import edu.duke.cs.osprey.gmec.SimpleGMECFinder;
 import edu.duke.cs.osprey.parallelism.Parallelism;
 import edu.duke.cs.osprey.restypes.ResidueTemplateLibrary;
 import edu.duke.cs.osprey.structure.Molecule;
@@ -173,60 +174,36 @@ public class AStarDebugger {
 			.setTemplateLibrary(templateLib)
 			.build();
 
-		ligand.flexibility.get("H1901").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
+//		ligand.flexibility.get("H1901").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
 		ligand.flexibility.get("H1904").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
 		ligand.flexibility.get("H1905").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
-		ligand.flexibility.get("H1906").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
+//		ligand.flexibility.get("H1906").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
 //		ligand.flexibility.get("H1907").setLibraryRotamers(Strand.WildType, "ALA", "VAL", "LEU", "ILE", "PHE", "TYR", "TRP", "CYS", "MET", "SER", "THR", "LYS", "ARG", "HIS", "ASP", "GLU", "ASN", "GLN", "GLY").addWildTypeRotamers().setContinuous();
-//
 //		ligand.flexibility.get("H1908").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
 
-//
-//		Strand target = new Strand.Builder(mol)
-//			.setResidues("F379", "J1791")
-//			.setTemplateLibrary(templateLib)
-//			.build();
-//		target.flexibility.get("G973").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
-//		target.flexibility.get("G977").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
-//		target.flexibility.get("G978").setLibraryRotamers(Strand.WildType).addWildTypeRotamers().setContinuous();
-//
 		SimpleConfSpace confSpace = new SimpleConfSpace.Builder()
 			.addStrand(ligand)
-//			.addStrand(target)
 			.build();
 
 		// calc the emat
 		EnergyMatrix emat;
-		try (EnergyCalculator ecalc = new EnergyCalculator.Builder(confSpace, new ForcefieldParams())
+
+		// originally wrapped in a try block
+		EnergyCalculator ecalc = new EnergyCalculator.Builder(confSpace, new ForcefieldParams())
 			.setParallelism(Parallelism.makeCpu(4))
+			.build();
+		ConfEnergyCalculator confEcalc = new ConfEnergyCalculator.Builder(confSpace, ecalc).build();
+		emat = new SimplerEnergyMatrixCalculator.Builder(confEcalc)
+			.setCacheFile(new File("emat.gp120.complex.dat"))
 			.build()
-		) {
-			ConfEnergyCalculator confEcalc = new ConfEnergyCalculator.Builder(confSpace, ecalc).build();
-			emat = new SimplerEnergyMatrixCalculator.Builder(confEcalc)
-				.setCacheFile(new File("emat.gp120.complex.dat"))
-				.build()
-				.calcEnergyMatrix();
-		}
+			.calcEnergyMatrix();
+
 		// pick the wild-type sequence
 		Sequence sequence = confSpace.makeUnassignedSequence();
 //		Sequence sequence = confSpace.makeWildTypeSequence();
 		RCs rcs = sequence.makeRCs(confSpace);
 
 		log("confs: %s", formatBig(makeAStar(emat, rcs).getNumConformations()));
-//
-//		// get the min,max scores
-//		double minScore = makeAStar(emat, rcs)
-//			.nextConf()
-//			.getScore();
-//		log("min score: %.4f", minScore);
-//		double maxScore = -makeAStar(new NegatedEnergyMatrix(confSpace, emat), rcs)
-//			.nextConf()
-//			.getScore();
-//		log("max score: %.4f", maxScore);
-//
-		// pick a few energy thresholds to rank, relative to the min score
-		double[] energyOffsets = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };//, 11, 12 };//, 13, 14 };
-
 		log("");
 
 		// how quickly can we just enumerate the confs the regular way?
@@ -250,12 +227,18 @@ public class AStarDebugger {
 
 					log(conf.toString());
 				}
-
+//
+//				// export pdb files for a few conformations
 //				if(counter < 10){
 //					log(Arrays.toString(conf.getAssignments()));
+//					var structure = confSpace.makeMolecule(conf.getAssignments());
+//					PDBIO.writeFile(structure.mol, "/home/longyuxi/Documents/osprey_outputs/test-" + counter + ".pdb");
 //				}
+//
 				counter++;
 			}
+
+//			var gmec = new SimpleGMECFinder.Builder(astar, confEcalc).build().find();
 		}
 	}
 
